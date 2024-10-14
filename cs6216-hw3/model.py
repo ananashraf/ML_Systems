@@ -22,9 +22,23 @@ class KVCache:
         # Concatenate the key and value tensors along the sequence length dimension
         # If the cache is empty, initialize it with the key and value tensors
         # return the updated key and value tensors
+        if self.key is None or self.value is None:
+            # If the cache is empty, initialize it with the key and value tensors
+            self.key = key
+            self.value = value
+        else:
+            # Concatenate the new key and value with the existing cached tensors
+            self.key = torch.cat([self.key, key], dim=2)  # Concatenate along the sequence length dimension
+            self.value = torch.cat([self.value, value], dim=2)
+
+        # Return the updated key and value tensors
+        return self.key, self.value
 
     def past_key_values_length(self) -> int:
         # (TODO) Task 2: return the length of the past key values
+        if self.key is None:
+            return 0
+        return self.key.size(2)  # Sequence length is the third dimension
 
 
 @dataclass
@@ -237,7 +251,131 @@ class Attention(nn.Module):
         # 7. organize the attention output to [bs, seq_len, hidden_size] and return
 
         # Hint: use torch.finfo(attn_scores.dtype).min to get the mask value
+        # 1. Compute the attention scores using the query and key tensors
+        # Shape: [batch_size, num_attention_heads, seq_len, seq_len]
+        # attn_scores = torch.matmul(query, key.transpose(-1, -2)) * self.norm_factor
 
+        # # 2. Apply the causal mask to the attention scores using self.bias
+        # # Mask out future tokens (causal masking)
+        # attn_scores = attn_scores.masked_fill(self.bias[:, :, :attn_scores.size(-2), :attn_scores.size(-1)] == 0, torch.finfo(attn_scores.dtype).min)
+
+        # # 3. Apply the attention mask to the attention scores
+        # if attention_mask is not None:
+        #     attn_scores = attn_scores + attention_mask
+
+        # # 4. Apply the softmax activation function to the attention scores
+        # attn_weights = torch.softmax(attn_scores, dim=-1)
+
+        # # 5. Apply the attention dropout to the attention weights
+        # attn_weights = self.attention_dropout(attn_weights)
+
+        # # 6. Compute the attention output by multiplying the attention weights with the value tensor
+        # # Shape: [batch_size, num_attention_heads, seq_len, head_size]
+        # attn_output = torch.matmul(attn_weights, value)
+
+        # # 7. Organize the attention output to [batch_size, seq_len, hidden_size] and return
+        # # Permute and reshape to [batch_size, seq_len, hidden_size]
+        # attn_output = attn_output.transpose(1, 2).contiguous().view(attn_output.size(0), -1, self.hidden_size)
+
+        # return attn_output
+        
+        # attn_scores = torch.matmul(query, key.transpose(-1, -2)) * self.norm_factor
+
+        # # 2. Apply the causal mask to the attention scores using self.bias
+        # # Mask out future tokens (causal masking)
+        # attn_scores = attn_scores.masked_fill(self.bias[:, :, :attn_scores.size(-2), :attn_scores.size(-1)] == 0, torch.finfo(attn_scores.dtype).min)
+
+        # # 3. Apply the attention mask to the attention scores
+        # if attention_mask is not None:
+        #     attn_scores = attn_scores + attention_mask
+
+        # # 4. Apply the softmax activation function to the attention scores
+        # attn_weights = torch.softmax(attn_scores, dim=-1)
+
+        # # 5. Apply the attention dropout to the attention weights
+        # attn_weights = self.attention_dropout(attn_weights)
+
+        # # 6. Ensure that the data types match
+        # # Convert attn_weights to the same dtype as value
+        # attn_weights = attn_weights.to(value.dtype)
+
+        # # 7. Compute the attention output by multiplying the attention weights with the value tensor
+        # # Shape: [batch_size, num_attention_heads, seq_len, head_size]
+        # attn_output = torch.matmul(attn_weights, value)
+
+        # # 8. Organize the attention output to [batch_size, seq_len, hidden_size] and return
+        # # Permute and reshape to [batch_size, seq_len, hidden_size]
+        # attn_output = attn_output.transpose(1, 2).contiguous().view(attn_output.size(0), -1, self.hidden_size)
+
+        # return attn_output
+
+
+        # # Step 1: Compute the attention scores
+        # attn_scores = torch.matmul(query, key.transpose(-1, -2)) * self.norm_factor
+
+        # # Step 2: Apply the causal mask to the attention scores using self.bias
+        # attn_scores = attn_scores.masked_fill(self.bias[:, :, :attn_scores.size(-2), :attn_scores.size(-1)] == 0, torch.finfo(attn_scores.dtype).min)
+
+        # # Step 3: Apply the attention mask to the attention scores
+        # if attention_mask is not None:
+        #     # Ensure the mask has the correct shape for broadcasting
+        #     if attention_mask.dim() < 4:
+        #         attention_mask = attention_mask.unsqueeze(1).unsqueeze(2)
+        #     attn_scores = attn_scores + attention_mask
+
+        # # Step 4: Apply the softmax activation function to the attention scores
+        # attn_weights = torch.softmax(attn_scores, dim=-1)
+
+        # # Step 5: Apply the attention dropout to the attention weights
+        # attn_weights = self.attention_dropout(attn_weights)
+
+        # # Convert `attn_weights` to the same dtype as `value` before matmul
+        # attn_weights = attn_weights.to(value.dtype)
+
+        # # Step 6: Compute the attention output by multiplying the attention weights with the value tensor
+        # attn_output = torch.matmul(attn_weights, value)
+
+        # # Step 7: Organize the attention output to [batch_size, seq_len, hidden_size] and return
+        # attn_output = attn_output.transpose(1, 2).contiguous().view(attn_output.size(0), -1, self.hidden_size)
+
+        # return attn_output
+        # Step 1: Compute the attention scores
+
+        attn_scores = torch.matmul(query, key.transpose(-1, -2)) * self.norm_factor
+
+        # Step 2: Apply the causal mask to the attention scores using self.bias
+        attn_scores = attn_scores.masked_fill(self.bias[:, :, :attn_scores.size(-2), :attn_scores.size(-1)] == 0, torch.finfo(attn_scores.dtype).min)
+
+        # Step 3: Apply the attention mask to the attention scores
+        # if attention_mask is not None:
+        #     attn_scores = attn_scores + attention_mask
+
+
+        if attention_mask is not None:
+            attention_mask = attention_mask[:, None, None, :]  # [batch_size, 1, 1, seq_len]
+            attn_scores = attn_scores + attention_mask
+
+        # Step 3: Apply the attention mask to the attention scores
+        # if attention_mask is not None:
+        #     attention_mask = attention_mask.unsqueeze(1).unsqueeze(2)  # Expand to match the required dimensions
+        #     attn_scores = attn_scores + attention_mask
+
+        # Step 4: Apply the softmax activation function to the attention scores
+        attn_weights = torch.softmax(attn_scores, dim=-1)
+
+        # Step 5: Apply the attention dropout to the attention weights
+        attn_weights = self.attention_dropout(attn_weights)
+
+        attn_weights = attn_weights.to(value.dtype)
+
+
+        # Step 6: Compute the attention output by multiplying the attention weights with the value tensor
+        attn_output = torch.matmul(attn_weights, value)
+
+        # Step 7: Organize the attention output to [batch_size, seq_len, hidden_size] and return
+        attn_output = attn_output.transpose(1, 2).contiguous().view(attn_output.size(0), -1, self.hidden_size)
+
+        return attn_output
 
 class FeedForward(nn.Module):
     def __init__(self, config):
@@ -250,9 +388,18 @@ class FeedForward(nn.Module):
     def _gelu(self, x):
         # (TODO) Task 1: Implement the GELU activation function
         # ref: https://pytorch.org/docs/stable/generated/torch.nn.GELU.html
+        # return 0.5 * x * (1 + torch.tanh(torch.sqrt(torch.tensor(2.0 / torch.pi)) * (x + 0.044715 * torch.pow(x, 3))))
+        return 0.5 * x * (1 + torch.erf(x / torch.sqrt(torch.tensor(2.0))))
 
     def forward(self, hidden_states):
         # (TODO) Task 1: Implement the FeedForward forward pass
+                # Step 1: Apply the first linear transformation
+        intermediate_states = self.dense_h_to_4h(hidden_states)
+        # Step 2: Apply the GELU activation function
+        activated_states = self._gelu(intermediate_states)
+        # Step 3: Apply the second linear transformation
+        output_states = self.dense_4h_to_h(activated_states)
+        return output_states
 
 
 class PythiaLayer(nn.Module):

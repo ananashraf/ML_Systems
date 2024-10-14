@@ -38,6 +38,7 @@ def top_k_(logits, top_k=50, filter_value=-float("Inf")):
     # (TODO) Task 7 - Implement top-k sampling
     # Filter logits to only keep the top-k values
     # For the top-k values, keep them as they are, set the rest to filter_value
+    pass
 
 
 def top_p_(logits, top_p=0.9, min_tokens_to_keep=1, filter_value=-float("Inf")):
@@ -45,6 +46,7 @@ def top_p_(logits, top_p=0.9, min_tokens_to_keep=1, filter_value=-float("Inf")):
     # The function should filter out logits such that the cumulative probability exceeds `top_p`.
     # The function should keep at least `min_tokens_to_keep` tokens.
     # Hint: softmax the logits and calculate the cumulative probabilities.
+    pass
 
 
 def logits_to_probs(
@@ -73,6 +75,7 @@ def stop_on_eos(token: torch.Tensor) -> bool:
     # (TODO) Task 6 - Implement stopping on EOS token
     # Return True if the token is an EOS token, False otherwise
     # Hint: EOS token you can find in the tokenizer
+    pass
 
 
 def prefill(
@@ -93,7 +96,71 @@ def prefill(
     # Hint: use `model.forward` to get the logits
     # Hint: use `logits_to_probs` to get the probabilities from the logits
     # Hint: check CausalLMOutputWithPast for the return type of `model.forward`
-    # Hint: You should use `torch.multinomial` and pass the `generator`, so we can reproduce the results
+    # # Hint: You should use `torch.multinomial` and pass the `generator`, so we can reproduce the results
+    # outputs = model(input_ids=x, attention_mask=attention_mask)
+    
+    # # Step 2: Get the logits from the last token
+    # logits = outputs.logits[:, -1, :]
+    
+    # # Step 3: Convert logits to probabilities
+    # probs = logits_to_probs(logits, temperature, top_k, top_p)
+    
+    # # Step 4: Sample the next token
+    # next_token = torch.multinomial(probs, num_samples=1, generator=generator).squeeze(-1)
+    
+    # # Step 5: Return the next token and the updated KV caches
+    # return next_token, outputs.kvcaches
+    # Step 1: Forward pass through the model
+
+    # outputs = model(input_ids=x, attention_mask=attention_mask)
+    
+    # # Step 2: Get the logits from the last token
+    # logits = outputs.logits[:, -1, :]
+    
+    # # Step 3: Convert logits to probabilities
+    # probs = logits_to_probs(logits, temperature, top_k, top_p)
+    
+    # # Step 4: Sample the next token
+    # next_token = torch.multinomial(probs, num_samples=1, generator=generator).squeeze(-1)
+    
+    # # Step 5: Ensure next_token is a scalar
+    # next_token = next_token.squeeze()
+    
+    # # Step 6: Return the next token and the updated KV caches
+    # return next_token, outputs.kvcaches
+
+    # attention_mask = attention_mask.unsqueeze(1).unsqueeze(2)  # Make sure the attention mask has the correct shape
+
+    # Step 1: Forward pass through the model
+    outputs = model(input_ids=x, attention_mask=attention_mask)
+
+    # Step 2: Get the logits from the last token
+    logits = outputs.logits[:, -1, :]
+
+    # Step 3: Convert logits to probabilities
+    probs = logits_to_probs(logits, temperature, top_k, top_p)
+
+    # Step 4: Sample the next token
+    next_token = torch.multinomial(probs, num_samples=1, generator=generator).squeeze(-1)
+
+    # Step 5: Ensure next_token is a scalar
+    next_token = next_token.squeeze()
+
+    # Step 6: Return the next token and the updated KV caches
+    return next_token, outputs.kvcaches
+
+
+    # outputs = model(input_ids=x, attention_mask=attention_mask)
+    # logits = outputs.logits[:, -1, :]
+
+    # # Convert logits to probabilities
+    # probs = logits_to_probs(logits, temperature, top_k, top_p)
+
+    # # Sample the next token from the probability distribution
+    # next_token = torch.multinomial(probs, num_samples=1, generator=generator).squeeze(-1)
+
+    # # Return the next token and the updated KV caches
+    # return next_token, outputs.kvcaches
 
 
 def decode(
@@ -115,9 +182,80 @@ def decode(
     # Output: new_tokens - the list of new token tensors of shape [batch_size]
 
     # Hint: You should use `torch.multinomial` and pass the `generator`, so we can reproduce the results
+    # new_tokens = []
+    # batch_size = cur_token.size(0)
+
+    # for _ in range(num_new_tokens):
+    #     # Forward pass through the model to get logits
+    #     input_ids = cur_token.view(batch_size, -1)  # Ensure input_ids has shape [batch_size, seq_len]
+    #     outputs = model(input_ids=input_ids, attention_mask=attention_mask, kvcaches=kvcaches)
+    #     logits = outputs.logits[:, -1, :]
+
+    #     # Convert logits to probabilities
+    #     probs = logits_to_probs(logits, temperature, top_k, top_p)
+
+    #     # Use argmax to pick the highest probability token for more deterministic behavior
+    #     next_token = torch.argmax(probs, dim=-1)
+
+    #     # Append the new token to the list of new tokens
+    #     new_tokens.append(next_token)
+
+    #     # Update the current token
+    #     cur_token = next_token
+
+    #     # Update the key-value caches
+    #     kvcaches = outputs.kvcaches
+
+    #     # Adjust the attention mask to include the new token
+    #     attention_mask = torch.cat([attention_mask, torch.ones((batch_size, 1), dtype=attention_mask.dtype, device=attention_mask.device)], dim=1)
+
+    #     # Break if the EOS token is generated
+    #     if stop_on_eos(next_token):
+    #         break
+
+    # return new_tokens
+
+
+    new_tokens = []
+    batch_size = cur_token.size(0)
+
+    for step in range(num_new_tokens):
+        input_ids = cur_token.view(batch_size, -1)
+        outputs = model(input_ids=input_ids, attention_mask=attention_mask, kvcaches=kvcaches)
+        logits = outputs.logits[:, -1, :]
+
+        # Debugging outputs
+        print(f"Step {step}: Logits:", logits)
+        print(f"Step {step}: KV Caches:", outputs.kvcaches)
+
+        # Convert logits to probabilities
+        probs = logits_to_probs(logits, temperature, top_k, top_p)
+        print(f"Step {step}: Probabilities:", probs)
+
+        # Use argmax to pick the highest probability token
+        next_token = torch.argmax(probs, dim=-1)
+        print(f"Step {step}: Next Token (Argmax):", next_token)
+
+        new_tokens.append(next_token)
+        cur_token = next_token
+        kvcaches = outputs.kvcaches  # Update KV caches
+
+        # Verify the shape and content of the attention mask
+        print(f"Step {step}: Attention Mask Before Update: {attention_mask.shape}")
+        attention_mask = torch.cat([attention_mask, torch.ones((batch_size, 1), dtype=attention_mask.dtype, device=attention_mask.device)], dim=1)
+        print(f"Step {step}: Attention Mask After Update: {attention_mask.shape}")
+
+        if stop_on_eos(next_token):
+            break
+
+    return new_tokens
+
+
 
     # (TODO) Task 6 - Implement stopping on EOS token
     # use `stop_on_eos` to check if the token is an EOS token, if so, break the loop
+
+    
 
 
 @torch.no_grad()
